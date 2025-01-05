@@ -3,6 +3,7 @@ from enum import Enum
 
 
 class Mapping:
+
     # Make enum for message types
     class MessageType(Enum):
         NOTE_ON = "note_on"
@@ -49,6 +50,7 @@ class Mapping:
         47: Component(name="FADER_15", component_type=ComponentType.FADER, scale_type="unsigned", extra={"scale_range": (0, 127)}),
 
     }
+
 
     # control_change
     KNOB = {
@@ -138,4 +140,60 @@ class Mapping:
             60: Component(name="DOWN", component_type=ComponentType.BUTTON, scale_type="binary", extra={"accepted_values": (0, 127), "shift": "RIGHT"}),
             61: Component(name="LEFT", component_type=ComponentType.BUTTON, scale_type="binary", extra={"accepted_values": (0, 127), "shift": "RIGHT"}),
             62: Component(name="RIGHT", component_type=ComponentType.BUTTON, scale_type="binary", extra={"accepted_values": (0, 127), "shift": "RIGHT"}),
+    }
+
+    GUI_BUTTON_TO_COMPONENT = {
+        # Mute
+        BUTTON[16]: "BUTTON_0_0",
+        BUTTON[17]: "BUTTON_1_0",
+        BUTTON[18]: "BUTTON_2_0",
+        BUTTON[19]: "BUTTON_3_0",
+        BUTTON[20]: "BUTTON_4_0",
+        BUTTON[21]: "BUTTON_5_0",
+        BUTTON[22]: "BUTTON_6_0",
+        BUTTON[23]: "BUTTON_7_0",
+
+        # Solo
+        BUTTON[8]: "BUTTON_0_1",
+        BUTTON[9]: "BUTTON_1_1",
+        BUTTON[10]: "BUTTON_2_1",
+        BUTTON[11]: "BUTTON_3_1",
+        BUTTON[12]: "BUTTON_4_1",
+        BUTTON[13]: "BUTTON_5_1",
+        BUTTON[14]: "BUTTON_6_1",
+        BUTTON[15]: "BUTTON_7_1",
+
+        # Rec Arm
+        BUTTON[0]: "BUTTON_0_2",
+        BUTTON[1]: "BUTTON_1_2",
+        BUTTON[2]: "BUTTON_2_2",
+        BUTTON[3]: "BUTTON_3_2",
+        BUTTON[4]: "BUTTON_4_2",
+        BUTTON[5]: "BUTTON_5_2",
+        BUTTON[6]: "BUTTON_6_2",
+        BUTTON[7]: "BUTTON_7_2",
+
+        # Select
+        BUTTON[24]: "BUTTON_0_3",
+        BUTTON[25]: "BUTTON_1_3",
+        BUTTON[26]: "BUTTON_2_3",
+        BUTTON[27]: "BUTTON_3_3",
+        BUTTON[28]: "BUTTON_4_3",
+        BUTTON[29]: "BUTTON_5_3",
+        BUTTON[30]: "BUTTON_6_3",
+        BUTTON[31]: "BUTTON_7_3",
+
+        # Control
+        BUTTON[94]: "CONTROL_0",
+        BUTTON[93]: "CONTROL_1",
+        BUTTON[95]: "CONTROL_2",
+        BUTTON[91]: "CONTROL_3",
+        BUTTON[92]: "CONTROL_4",
+        BUTTON[46]: "CONTROL_5",
+        BUTTON[47]: "CONTROL_6",
+        BUTTON[96]: "CONTROL_7",
+        BUTTON[97]: "CONTROL_8",
+        BUTTON[98]: "CONTROL_9",
+        BUTTON[99]: "CONTROL_10",
+
     }

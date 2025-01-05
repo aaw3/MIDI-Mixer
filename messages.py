@@ -1,4 +1,7 @@
 from mappings import Mapping
+from gui import MixerBoard
+import time
+import threading
 
 class Messages:
     
@@ -53,7 +56,20 @@ class Messages:
                 knob_value = -1
         elif knob.scale_type == "linear":
             knob_value = knob_value / 127
-        print(f"Knob: {Mapping.KNOB[message.control].name}, Value: {knob_value}")
+        #print(f"Knob: {Mapping.KNOB[message.control].name}, Value: {knob_value}")
+        # Knob
+        extra_args = MixerBoard.extra_args[knob.name] if knob.name in MixerBoard.extra_args else None
+        function = MixerBoard.get_function_by_component_name(knob.name)
+
+        if not function:
+            return
+
+        knob_number = int(knob.name.split("_")[-1])
+
+        if not extra_args:
+            function.call(knob_value, knob_number)
+        else:
+            function.call(knob_value, knob_number *extra_args)
     
     def handle_fader_message(message):
         if message.type == Mapping.MessageType.PITCHWHEEL.value:
@@ -71,14 +87,103 @@ class Messages:
         elif fader.scale_type == "unsigned":
             min_value, max_value = fader.extra["scale_range"]
             fader_value = message.value / max_value
-        print(f"Fader: {fader.name}, Value: {fader_value}")
+        #print(f"Fader: {fader.name}, Value: {fader_value}")
+        # Fader
+        extra_args = MixerBoard.get_extra_args(fader.name)
+        function = MixerBoard.get_function_by_component_name(fader.name)
+        
+        if not function:
+            return
+
+        print("fader_name", fader.name, "fader_number", fader.name.split("_")[-1])
+        fader_number = int(fader.name.split("_")[-1])
+
+        list_extra_args = list(extra_args)
+        list_extra_args.insert(0, fader_number)
+
+        extra_args = tuple(list_extra_args)
+
+        print("After: ", extra_args)
+
+        Messages.throttled_process(fader.name, fader_value, function.get_message_rate(), function.call, extra_args)
 
     def handle_button_message(message):
         #print("handling button message")
         if message.type == Mapping.MessageType.NOTE_ON.value or message.type == Mapping.MessageType.NOTE_OFF.value:
             velocity = message.velocity
             button = Mapping.BUTTON[message.note]
+            # Get GUI name of button
+            button_name = Mapping.GUI_BUTTON_TO_COMPONENT[button]
+            extra_args = MixerBoard.extra_args[button_name] if button_name in MixerBoard.extra_args else None
+            function = MixerBoard.get_function_by_component_name(button_name)
+
+
+            if not function:
+                return
+
+
             if velocity == 127:
-                print(f"BTN_UP: {button.extra["shift"] if "shift" in button.extra else ""} {button.extra["fader_effect"] if "fader_effect" in button.extra else ""} {button.name}")
+                # Button DOWN
+                if not extra_args:
+                    function.call_down()
+                else:
+                    function.call_down(*extra_args)
             elif velocity == 0:
-                print(f"BTN_DOWN: {button.name}")
+                # Button UP
+                if not extra_args:
+                    function.call_up()
+                else:
+                    function.call_up(*extra_args)
+                
+                
+
+
+    throttle_tracker = {}
+    def throttled_process(name, position, calls_per_second, callback, args=None):
+        """
+        Throttle the processing of a named entity to a maximum number of calls per second.
+
+        :param name: A unique identifier for the entity (e.g., slider name).
+        :param position: The value to process for the entity.
+        :param calls_per_second: Maximum allowed calls per second for this entity.
+        :param callback: Function to call for processing the position.
+        """
+        current_time = time.time()
+        min_interval = 1 / calls_per_second
+
+        # Initialize tracker for the entity if not already present
+        if name not in Messages.throttle_tracker:
+            Messages.throttle_tracker[name] = {"last_time": 0, "latest_position": None, "timer_active": False}
+
+        tracker = Messages.throttle_tracker[name]
+        elapsed_time = current_time - tracker["last_time"]
+
+        if elapsed_time >= min_interval:
+            # Process the current position immediately
+            if not args:
+                callback(position)
+            else:
+                callback(position, *args)
+            tracker["last_time"] = current_time
+            tracker["latest_position"] = None
+            tracker["timer_active"] = False
+        else:
+            # Save the latest position for deferred processing
+            tracker["latest_position"] = position
+            if not tracker["timer_active"]:
+                time_to_next_call = min_interval - elapsed_time
+                tracker["timer_active"] = True
+
+                # Schedule the next processing
+                def process_deferred():
+                    if tracker["latest_position"] is not None:
+                        if not args:
+                            callback(tracker["latest_position"])
+                        else:
+                            callback(tracker["latest_position"], *args)
+                        tracker["last_time"] = time.time()
+                        tracker["latest_position"] = None
+                    tracker["timer_active"] = False
+
+                # Use threading or simulate delayed execution
+                threading.Timer(time_to_next_call, process_deferred).start()

@@ -4,13 +4,60 @@ from messages import Messages
 import threading
 import time
 from lighting import Lighting
-from easyeffects import EasyEffects
+from loader import get_categorized_exports
+from gui import MixerBoard
 
 def list_midi_ports():
     """List all available MIDI input ports."""
     print("Available MIDI input ports:")
     for index, port_name in enumerate(mido.get_input_names()):
         print(f"{index}: {port_name}")
+
+def select_midi_port():
+    list_midi_ports()
+
+    config = Config()
+    port_name = None
+    while True:
+        # Prompt user to select a port
+        try:
+            port_number = int(input("Enter the number of the MIDI input port you want to use: "))
+        except ValueError:
+            print("Invalid input. Try again.")
+            continue
+        midi_ports = mido.get_input_names()
+        if port_number < 0 or port_number >= len(midi_ports):
+            print("Invalid port number. Try again.")
+            continue
+
+        port_name = midi_ports[port_number]
+        config.save_input(port_name)
+        break
+
+        return port_name
+
+    try: 
+        midi_input = mido.open_input(port_name)
+        midi_input.close()
+        return port_name
+    except:
+        print("Trying to use old port failed, please select a new port.")
+        port_name = None
+        select_midi_port()
+
+new_port_selected = False
+
+port_name = None
+def handle_console_input():
+    """Handle console input to change the MIDI input port."""
+    while True:
+        result = input()
+        # Enter key was pressed
+        if result == "":
+            global new_port_selected, port_name
+            port_name = select_midi_port()
+            print("New MIDI input port selected: ", port_name)
+            new_port_selected = True
 
 
 def send_note_off(outport, note, delay, use_note_on=False):
@@ -27,58 +74,62 @@ def send_note_off(outport, note, delay, use_note_on=False):
 
 
 def main():
+    global new_port_selected, port_name
     # List all available MIDI input ports if none were selected
     # Note: The right shifted mode makes some buttons act as faders and knobs for unrelated rows, therefore develop has been paused
     # Clients can manage the shifting through the arrow buttons on a software level
-    config = Config()
-    port_name = config.get_saved_input()
-    
-    if not port_name:
-        list_midi_ports()
-    
 
-        while True:
-            # Prompt user to select a port
-            try:
-                port_number = int(input("Enter the number of the MIDI input port you want to use: "))
-            except ValueError:
-                print("Invalid input. Try again.")
-                continue
-    
-    
-            midi_ports = mido.get_input_names()
-            if port_number < 0 or port_number >= len(midi_ports):
-                print("Invalid port number. Try again.")
-                continue
-        
-            port_name = midi_ports[port_number]
-            config.save_input(port_name)
-            break
+    port_name = select_midi_port()
 
     print(f"Listening to MIDI input from: {port_name}")
 
-    easyeffects = EasyEffects()
-
-    try:
-        with mido.open_input(port_name) as inport, mido.open_output(port_name) as outport:
-            print("Press Ctrl+C to stop.")
-
-            threading.Thread(target=Lighting.Display.Snake, args=(outport,)).start()
-
-            for message in inport:
-                #print(message)
-                # Use async to delay the send message by 0.5 seconds on another thread
-                #outport.send(message)
-                #if message.type == "note_on" or message.type == "note_off":
-                #    threading.Thread(target=send_note_off, args=(outport, message.note, 0.5, True)).start()
-                Messages.handle_midi_message(message)
-
-                easyeffects.run_test()
+    print("Press enter to reselect the MIDI input port.")
 
 
 
-    except KeyboardInterrupt:
-        print("Exiting.")
+    exports = get_categorized_exports("modules")
+    gui = MixerBoard(exports)
+    threading.Thread(target=gui.start).start()
+
+    # Start a thread to handle console input
+    threading.Thread(target=handle_console_input).start()
+
+    while True:
+        try:
+            with mido.open_input(port_name) as inport, mido.open_output(port_name) as outport:
+                stop_event = threading.Event()
+
+                snake_thread = threading.Thread(target=Lighting.Display.Snake, args=(outport, stop_event), daemon=True)
+                snake_thread.start()
+
+                print("Press Ctrl+C to stop.")
+
+                while True:
+                    message = inport.poll()  # Non-blocking MIDI message retrieval
+
+                    if new_port_selected:
+                        new_port_selected = False
+                        stop_event.set()  # Stop the Snake thread
+                        snake_thread.join()  # Wait for the thread to finish
+                        time.sleep(1)
+                        break
+
+                    if message:
+                        Messages.handle_midi_message(message)
+
+        except KeyboardInterrupt:
+            print("Ctrl+C pressed. Exiting.")
+            stop_event.set()  # Stop the Snake thread
+            if snake_thread.is_alive():
+                snake_thread.join()  # Ensure the thread terminates
+            break
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            stop_event.set()  # Ensure the Snake thread is stopped on other exceptions
+            if snake_thread.is_alive():
+                snake_thread.join()
+            break
+
 
 if __name__ == "__main__":
     main()
