@@ -81,6 +81,6 @@ def _has_duplicate_names(exports):
     :param exports: The list of exports.
     :return: A list of duplicate names.
     """
-    all_functions = [str(export) for export in exports]
+    all_functions = [f"{type(export).__name__}.{str(export)}" for export in exports]
 
     return len(all_functions) != len(set(all_functions))

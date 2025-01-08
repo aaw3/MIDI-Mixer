@@ -66,12 +66,15 @@ class Messages:
 
         knob_number = int(knob.name.split("_")[-1])
 
-        list_extra_args = list(extra_args)
-        list_extra_args.insert(0, fader_number)
+        list_extra_args = list(extra_args) if extra_args else []
+        list_extra_args.insert(0, knob_number)
 
         extra_args = tuple(list_extra_args)
 
-        function.call(knob_value, knob_number *extra_args)
+        try:
+            function.call(knob_value, knob_number *extra_args)
+        except Exception as e:
+            print(f"Knob: Error calling function {function} with args {extra_args}: {e}")
     
     def handle_fader_message(message):
         if message.type == Mapping.MessageType.PITCHWHEEL.value:
@@ -105,12 +108,15 @@ class Messages:
         print("fader_name", fader.name, "fader_number", fader.name.split("_")[-1])
         fader_number = int(fader.name.split("_")[-1])
 
-        list_extra_args = list(extra_args)
+        list_extra_args = list(extra_args) if extra_args else []
         list_extra_args.insert(0, fader_number)
 
         extra_args = tuple(list_extra_args)
 
-        Messages.throttled_process(fader.name, fader_value, function.get_message_rate(), function.call, extra_args)
+        try:
+            Messages.throttled_process(fader.name, fader_value, function.get_message_rate(), function.call, extra_args)
+        except Exception as e:
+            print(f"Fader: Error calling function {function} with args {extra_args}: {e}")
 
     def handle_button_message(message):
         #print("handling button message")
@@ -132,19 +138,24 @@ class Messages:
             if not function:
                 return
 
+            list_extra_args = list(extra_args) if extra_args else []
+            list_extra_args.insert(0, button_name)
+
+            extra_args = tuple(list_extra_args)
+
 
             if velocity == 127:
                 # Button DOWN
-                if not extra_args:
-                    function.call_down()
-                else:
-                    function.call_down(*extra_args)
+                try:
+                    function.call_down(velocity, *extra_args)
+                except Exception as e:
+                    print(f"Button Down: Error calling function {function} with args {extra_args}: {e}")
             elif velocity == 0:
                 # Button UP
-                if not extra_args:
-                    function.call_up()
-                else:
-                    function.call_up(*extra_args)
+                try:
+                    function.call_up(velocity, *extra_args)
+                except Exception as e:
+                    print(f"Button Up: Error calling function {function} with args {extra_args}: {e}")
                 
                 
 
