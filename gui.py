@@ -290,7 +290,6 @@ class InputDialog(Gtk.Dialog):
         else:
             self.input_field = Gtk.ComboBoxText()
             for option in options:
-                print("Option", option)
                 self.input_field.append_text(option)
             self.input_field.set_active(0)  # Set default selection to the first option
 
