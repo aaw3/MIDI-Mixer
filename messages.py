@@ -72,7 +72,7 @@ class Messages:
         extra_args = tuple(list_extra_args)
 
         try:
-            function.call(knob_value, knob_number *extra_args)
+            function.call(knob_value, *extra_args)
         except Exception as e:
             print(f"Knob: Error calling function {function} with args {extra_args}: {e}")
     

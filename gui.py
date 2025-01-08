@@ -207,7 +207,8 @@ class MixerBoard(Gtk.Window):
                         description=arg.get_description(),
                         default_value=arg.get_default(),
                         input_type=arg.get_type(),
-                        options=arg.get_options(),
+                        # Call the get_options method if it exists
+                        options=arg.get_options()() if arg.get_options() else None,
                         )
                         response = dialog.run()
     
