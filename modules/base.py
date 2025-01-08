@@ -9,12 +9,13 @@ class DynamicArgs:
     :param criteria_callback: Function that returns True if the value returned from the checkbox is valid, otherwise False
     """
 
-    def __init__(self, name: str, type: str, default, description: str, criteria_callback=None):
+    def __init__(self, name: str, type: str, default, description: str, criteria_callback=None, options=None):
         self.name = name
         self.type = type
         self.default = default
         self.description = description
         self.criteria_callback = criteria_callback
+        self.options = options
 
     def __str__(self):
         return f"Dynamic Argument: {self.name}, {self.type}, {self.default}, {self.description}"
@@ -33,6 +34,9 @@ class DynamicArgs:
 
     def get_criteria_callback(self):
         return self.criteria_callback
+
+    def get_options(self):
+        return self.options
 
 
 class ControlFunction:

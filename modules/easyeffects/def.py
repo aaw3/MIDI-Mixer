@@ -7,7 +7,7 @@ from modules.easyeffects.criteria import non_negative
 export = []
 
 # Fader EQ
-faderEQ = FaderFunction("Fader EQ", "EasyEffects", True, 30, update_eq_gain, [DynamicArgs("EQ Number", int, 0, "Equalizer Effect Number")])
+faderEQ = FaderFunction("Fader EQ", "EasyEffects", True, 10, update_eq_gain, [DynamicArgs("EQ Number", int, 0, "Equalizer Effect Number")])
 export.append(faderEQ)
 
 # Decrement Fader Shift

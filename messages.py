@@ -66,10 +66,12 @@ class Messages:
 
         knob_number = int(knob.name.split("_")[-1])
 
-        if not extra_args:
-            function.call(knob_value, knob_number)
-        else:
-            function.call(knob_value, knob_number *extra_args)
+        list_extra_args = list(extra_args)
+        list_extra_args.insert(0, fader_number)
+
+        extra_args = tuple(list_extra_args)
+
+        function.call(knob_value, knob_number *extra_args)
     
     def handle_fader_message(message):
         if message.type == Mapping.MessageType.PITCHWHEEL.value:
@@ -77,6 +79,7 @@ class Messages:
         elif message.type == Mapping.MessageType.CONTROL_CHANGE.value:
             fader = Mapping.FADER[message.control]
             
+        
         if fader.scale_type == "signed":
             fader_value = message.pitch
             min_value, max_value = fader.extra["scale_range"]
@@ -88,12 +91,16 @@ class Messages:
             min_value, max_value = fader.extra["scale_range"]
             fader_value = message.value / max_value
         #print(f"Fader: {fader.name}, Value: {fader_value}")
-        # Fader
+        
         extra_args = MixerBoard.get_extra_args(fader.name)
         function = MixerBoard.get_function_by_component_name(fader.name)
-        
+
+        # Fader
         if not function:
             return
+
+        if function.get_signed() == False:
+            fader_value = (fader_value + 1) / 2
 
         print("fader_name", fader.name, "fader_number", fader.name.split("_")[-1])
         fader_number = int(fader.name.split("_")[-1])
@@ -102,8 +109,6 @@ class Messages:
         list_extra_args.insert(0, fader_number)
 
         extra_args = tuple(list_extra_args)
-
-        print("After: ", extra_args)
 
         Messages.throttled_process(fader.name, fader_value, function.get_message_rate(), function.call, extra_args)
 
@@ -116,6 +121,12 @@ class Messages:
             button_name = Mapping.GUI_BUTTON_TO_COMPONENT[button]
             extra_args = MixerBoard.extra_args[button_name] if button_name in MixerBoard.extra_args else None
             function = MixerBoard.get_function_by_component_name(button_name)
+
+
+        #list_extra_args = list(extra_args)
+        #list_extra_args.insert(0, fader_number)
+#
+        #extra_args = tuple(list_extra_args)
 
 
             if not function:

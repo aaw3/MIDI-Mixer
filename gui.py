@@ -207,11 +207,12 @@ class MixerBoard(Gtk.Window):
                         description=arg.get_description(),
                         default_value=arg.get_default(),
                         input_type=arg.get_type(),
+                        options=arg.get_options(),
                         )
                         response = dialog.run()
     
                         if response == Gtk.ResponseType.OK:
-                            value = dialog.get_input_value()
+                            value = arg.get_type()(dialog.get_input_value())
                             if arg.get_criteria_callback() and not arg.get_criteria_callback()(value):
                                 print(f"Invalid value for {arg.get_name()}: {value}")
                                 continue
@@ -249,7 +250,15 @@ class MixerBoard(Gtk.Window):
         Gtk.main()
 
 class InputDialog(Gtk.Dialog):
-    def __init__(self, parent, title, description, default_value, input_type):
+    def __init__(self, parent, title, description, default_value, input_type, options=None):
+        """
+        :param parent: The parent window.
+        :param title: Title of the dialog.
+        :param description: Description of the input field.
+        :param default_value: Default value for the input field.
+        :param input_type: The type of input field (int, float, str, list).
+        :param options: Options for ComboBox, required if input_type is list.
+        """
         super().__init__(title=title, transient_for=parent, flags=0)
 
         # Add buttons to the dialog
@@ -264,19 +273,26 @@ class InputDialog(Gtk.Dialog):
         label.set_line_wrap(True)
         content_area.pack_start(label, True, True, 10)
 
-        # Create an input field based on the input type
-        if input_type == int:
-            self.input_field = Gtk.SpinButton()
-            self.input_field.set_adjustment(Gtk.Adjustment(default_value, -1e6, 1e6, 1, 10, 0))
-        elif input_type == float:
-            self.input_field = Gtk.SpinButton()
-            self.input_field.set_adjustment(Gtk.Adjustment(default_value, -1e6, 1e6, 1, 10, 0))
-            self.input_field.set_digits(4)
-        elif input_type == str:
-            self.input_field = Gtk.Entry()
-            self.input_field.set_text(str(default_value))
+        if options is None:
+            # Create an input field based on the input type
+            if input_type == int:
+                self.input_field = Gtk.SpinButton()
+                self.input_field.set_adjustment(Gtk.Adjustment(default_value, -1e6, 1e6, 1, 10, 0))
+            elif input_type == float:
+                self.input_field = Gtk.SpinButton()
+                self.input_field.set_adjustment(Gtk.Adjustment(default_value, -1e6, 1e6, 1, 10, 0))
+                self.input_field.set_digits(4)
+            elif input_type == str:
+                self.input_field = Gtk.Entry()
+                self.input_field.set_text(str(default_value))
+            else:
+                raise ValueError(f"Unsupported input type: {input_type}")
         else:
-            raise ValueError(f"Unsupported input type: {input_type}")
+            self.input_field = Gtk.ComboBoxText()
+            for option in options:
+                print("Option", option)
+                self.input_field.append_text(option)
+            self.input_field.set_active(0)  # Set default selection to the first option
 
         content_area.pack_start(self.input_field, False, False, 10)
 
@@ -284,12 +300,14 @@ class InputDialog(Gtk.Dialog):
 
     def get_input_value(self):
         """
-        Get the value entered by the user in the dialog.
+        Get the value entered or selected by the user in the dialog.
 
-        :return: The input value (string or number based on input type).
+        :return: The input value (string, number, or selected option).
         """
         if isinstance(self.input_field, Gtk.Entry):
             return self.input_field.get_text()
         elif isinstance(self.input_field, Gtk.SpinButton):
             return self.input_field.get_value()
+        elif isinstance(self.input_field, Gtk.ComboBoxText):
+            return self.input_field.get_active_text()
         return None
