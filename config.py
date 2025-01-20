@@ -5,10 +5,10 @@ class Config:
         self.config = None
         self.read_config()
 
-    def read_config(self):
+    def read_config(self, filename="config.yaml"):
         """Read the config file and store the contents in the config attribute."""
         try:
-            with open("config.yaml", "r") as file:
+            with open(filename, "r") as file:
                 self.config = yaml.safe_load(file)
         except Exception as e:
             self.config = {}
@@ -26,3 +26,8 @@ class Config:
 
         with open("config.yaml", "w") as file:
             pyaml.dump(self.config, file)
+
+    def save_raw(self, raw, filename="page.yaml"):
+        """Save the raw configuration to the config file."""
+        with open(filename, "w") as file:
+            pyaml.dump(raw, file)

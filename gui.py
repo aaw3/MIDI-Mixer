@@ -1,6 +1,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Pango
+from config import Config
 
 
 class MixerBoard(Gtk.Window):
@@ -18,10 +19,14 @@ class MixerBoard(Gtk.Window):
     def get_extra_args(name):
         return MixerBoard.extra_args[name] if name in MixerBoard.extra_args else None
 
+
     extra_args = {}
     def __init__(self, module_functions):
         super().__init__(title="Mixer Board Layout")
         self.set_default_size(1200, 600)
+        self.config = Config()
+
+
         # Have to convert from form [{pluginname1: {knob: {}, fader: {}, button: {}}}, {pluginname2: {knob: {}, fader: {}, button: {}}}]
         self.knob_functions = module_functions["KnobFunction"] if "KnobFunction" in module_functions else {}
         self.fader_functions = module_functions["FaderFunction"] if "FaderFunction" in module_functions else {}
@@ -34,6 +39,36 @@ class MixerBoard(Gtk.Window):
         # Main vertical layout
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.add(main_box)
+        
+
+
+
+
+        # Create the menu bar
+        menubar = Gtk.MenuBar()
+
+        # Create the File menu
+        file_menu = Gtk.Menu()
+        file_menu_item = Gtk.MenuItem(label="File")
+        file_menu_item.set_submenu(file_menu)
+
+        # Add Save and Quit items to the File menu
+        save_item = Gtk.MenuItem(label="Save")
+        save_item.connect("activate", self.on_save)
+        file_menu.append(save_item)
+
+        quit_item = Gtk.MenuItem(label="Quit")
+        quit_item.connect("activate", self.on_quit)
+        file_menu.append(quit_item)
+
+        # Add File menu to the menu bar
+        menubar.append(file_menu_item)
+
+        # Add the menu bar to the layout
+        main_box.pack_start(menubar, False, False, 0)
+
+
+
 
         # Create a grid for the mixer layout (knobs, faders, and buttons)
         top_grid = Gtk.Grid()
@@ -111,6 +146,24 @@ class MixerBoard(Gtk.Window):
             dropdown.set_vexpand(False)  # Prevent full vertical expansion
             dropdown.set_size_request(20, 8)  # Minimum height
             bottom_grid.attach(dropdown, i, 1, 1, 1)
+
+    def on_save(self, widget):
+        print("Save menu item clicked!")
+        # Add your save functionality here
+        # Need to work on a new system of saving the data
+        # Will implement a uuid system into controlfunction and a get_identiffiable_info methdo that returns plugin name, function name, uuid
+        # There will be a component ID that maps an ID to a function and when saving the function it will take the ID from the component and get the function and store based on the get_identifiable_info
+        data = {
+            'module_fn_name_to_function': MixerBoard.module_fn_name_to_function,
+            'component_to_module': MixerBoard.component_to_module_name,
+            'extra_args': MixerBoard.extra_args,
+        }
+        self.config.save_raw(data, "page.yaml")
+
+    def on_quit(self, widget):
+        print("Quit menu item clicked!")
+        Gtk.main_quit()
+        self.destroy()
 
     def create_multi_dropdown(self, identifier):
         """Create a button that mimics the dropdown behavior."""

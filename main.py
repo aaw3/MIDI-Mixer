@@ -75,6 +75,7 @@ def send_note_off(outport, note, delay, use_note_on=False):
 
 def main():
     global new_port_selected, port_name
+    running = True
     # List all available MIDI input ports if none were selected
     # Note: The right shifted mode makes some buttons act as faders and knobs for unrelated rows, therefore develop has been paused
     # Clients can manage the shifting through the arrow buttons on a software level
@@ -89,12 +90,13 @@ def main():
 
     exports = get_categorized_exports("modules")
     gui = MixerBoard(exports)
-    threading.Thread(target=gui.start).start()
+    guiThread = threading.Thread(target=gui.start)
+    guiThread.start()
 
     # Start a thread to handle console input
     threading.Thread(target=handle_console_input).start()
 
-    while True:
+    while running:
         try:
             with mido.open_input(port_name) as inport, mido.open_output(port_name) as outport:
                 stop_event = threading.Event()
@@ -105,6 +107,13 @@ def main():
                 print("Press Ctrl+C to stop.")
 
                 while True:
+                    if not guiThread.is_alive():
+                        stop_event.set()  # Stop the Snake thread
+                        if snake_thread.is_alive():
+                            snake_thread.join()
+                        running = False
+                        break
+
                     message = inport.poll()  # Non-blocking MIDI message retrieval
 
                     if new_port_selected:
@@ -122,12 +131,14 @@ def main():
             stop_event.set()  # Stop the Snake thread
             if snake_thread.is_alive():
                 snake_thread.join()  # Ensure the thread terminates
+            running = False
             break
         except Exception as e:
             print(f"An error occurred: {e}")
             stop_event.set()  # Ensure the Snake thread is stopped on other exceptions
             if snake_thread.is_alive():
                 snake_thread.join()
+            running = False
             break
 
 
